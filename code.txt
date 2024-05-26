@@ -1,0 +1,141 @@
+import heapq
+from itertools import combinations
+
+# Input Module
+def read_distance_matrix(filename):
+    with open(filename, 'r') as file:
+        n = int(file.readline().strip())
+        distance_matrix = []
+        for _ in range(n):
+            row = list(map(int, file.readline().strip().split()))
+            distance_matrix.append(row)
+    return distance_matrix
+
+# Output Module
+def display_result(best_path, min_max_dist):
+    print("Best path:", best_path)
+    print("Minimum of the longest distances:", min_max_dist)
+
+# Utility Module
+def mst_heuristic(distance_matrix, remaining_cities):
+    if not remaining_cities:
+        return 0
+
+    sub_matrix = [[distance_matrix[i][j] for j in remaining_cities] for i in remaining_cities]
+    n = len(sub_matrix)
+    
+    in_mst = [False] * n
+    key = [float('inf')] * n
+    key[0] = 0
+    max_key = 0
+    
+    for _ in range(n):
+        u = min((k for k in range(n) if not in_mst[k]), key=lambda k: key[k])
+        in_mst[u] = True
+        max_key = max(max_key, key[u])
+        
+        for v in range(n):
+            if not in_mst[v] and sub_matrix[u][v] < key[v]:
+                key[v] = sub_matrix[u][v]
+    
+    return max_key
+
+# Search Algorithms Module
+
+# BFS
+def bfs_tsp(distance_matrix):
+    n = len(distance_matrix)
+    queue = [(0, [0], 0)]
+    best_path = None
+    min_max_dist = float('inf')
+
+    while queue:
+        current_city, path, max_dist = queue.pop(0)
+
+        if len(path) == n:
+            return_path = path + [0]
+            return_dist = max(max_dist, distance_matrix[current_city][0])
+            if return_dist < min_max_dist:
+                min_max_dist = return_dist
+                best_path = return_path
+            continue
+
+        for next_city in range(n):
+            if next_city not in path:
+                next_max_dist = max(max_dist, distance_matrix[current_city][next_city])
+                queue.append((next_city, path + [next_city], next_max_dist))
+
+    return best_path, min_max_dist
+
+# UCS
+def ucs_tsp(distance_matrix):
+    n = len(distance_matrix)
+    pq = [(0, 0, [0], 0)]
+    best_path = None
+    min_max_dist = float('inf')
+
+    while pq:
+        cost, current_city, path, max_dist = heapq.heappop(pq)
+
+        if len(path) == n:
+            return_path = path + [0]
+            return_dist = max(max_dist, distance_matrix[current_city][0])
+            if return_dist < min_max_dist:
+                min_max_dist = return_dist
+                best_path = return_path
+            continue
+
+        for next_city in range(n):
+            if next_city not in path:
+                next_cost = cost + distance_matrix[current_city][next_city]
+                next_max_dist = max(max_dist, distance_matrix[current_city][next_city])
+                heapq.heappush(pq, (next_cost, next_city, path + [next_city], next_max_dist))
+
+    return best_path, min_max_dist
+
+# A* Search
+def a_star_tsp(distance_matrix):
+    n = len(distance_matrix)
+    initial_remaining_cities = set(range(1, n))
+    pq = [(0, 0, [0], 0, initial_remaining_cities)]
+    best_path = None
+    min_max_dist = float('inf')
+
+    while pq:
+        f_score, current_city, path, max_dist, remaining_cities = heapq.heappop(pq)
+
+        if not remaining_cities:
+            return_path = path + [0]
+            return_dist = max(max_dist, distance_matrix[current_city][0])
+            if return_dist < min_max_dist:
+                min_max_dist = return_dist
+                best_path = return_path
+            continue
+
+        for next_city in remaining_cities:
+            next_path = path + [next_city]
+            next_max_dist = max(max_dist, distance_matrix[current_city][next_city])
+            next_remaining = remaining_cities - {next_city}
+            heuristic_cost = mst_heuristic(distance_matrix, next_remaining)
+            f_score = next_max_dist + heuristic_cost
+            heapq.heappush(pq, (f_score, next_city, next_path, next_max_dist, next_remaining))
+
+    return best_path, min_max_dist
+
+# Example usage
+if __name__ == "__main__":
+    distance_matrix = [
+        [0, 10, 15, 20],
+        [10, 0, 35, 25],
+        [15, 35, 0, 30],
+        [20, 25, 30, 0]
+    ]
+
+    result = bfs_tsp(distance_matrix)
+    display_result(*result)
+
+    result = ucs_tsp(distance_matrix)
+    display_result(*result)
+
+    result = a_star_tsp(distance_matrix)
+    display_result(*result)
